@@ -5,39 +5,37 @@ import ARCharacterScene from "./components/ARChanracterScene";
 function App() {
   const [started, setStarted] = useState(false);
   const [item, setItem] = useState(null);
+  const [arStarted, setArStarted] = useState(false);
 
   return (
     <>
-      {/* <CameraFeed />
-      <div
-        style={{
-          position: "absolute",
-          top: 0,
-          left: 0,
-          width: "100vw",
-          height: "100vh",
-        }}
-      >
-        <CharacterScene heldItem={item} />
-      </div> */}
-      <ARCharacterScene heldItem={item} />
-      {!started ? (
-        <button
+      {!arStarted && (
+        <div
+          onClick={() => setArStarted(true)}
           style={{
-            position: "absolute",
-            bottom: "40px",
-            left: "50%",
-            transform: "translateX(-50%)",
-            padding: "16px 24px",
-            fontSize: "1.2rem",
-            zIndex: 10,
+            position: "fixed",
+            top: 0,
+            left: 0,
+            width: "100vw",
+            height: "100vh",
+            background: "rgba(0, 0, 0, 0.7)",
+            color: "white",
+            display: "flex",
+            justifyContent: "center",
+            alignItems: "center",
+            fontSize: "24px",
+            zIndex: 9999,
+            cursor: "pointer",
           }}
-          onClick={() => setStarted(true)}
         >
-          Start
-        </button>
-      ) : (
-        <Menu onSelect={setItem} />
+          Tap to Start AR
+        </div>
+      )}
+      {arStarted && (
+        <>
+          <ARCharacterScene heldItem={item} />
+          <Menu onSelect={setItem} />
+        </>
       )}
     </>
   );

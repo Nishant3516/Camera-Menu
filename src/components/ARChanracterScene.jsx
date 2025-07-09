@@ -46,7 +46,7 @@ const ARScene = ({ heldItem }) => {
   useEffect(() => {
     const startAR = async () => {
       if (!navigator.xr) {
-        alert("WebXR not supported on this browser");
+        alert("WebXR not supported");
         return;
       }
 
@@ -63,10 +63,13 @@ const ARScene = ({ heldItem }) => {
       gl.xr.setReferenceSpaceType("local");
       gl.xr.setSession(session);
 
-      refSpace.current = await session.requestReferenceSpace("viewer");
-      hitTestSourceRef.current = await session.requestHitTestSource({
-        space: refSpace.current,
+      const viewerRefSpace = await session.requestReferenceSpace("viewer");
+      refSpace.current = viewerRefSpace;
+
+      const hitTestSource = await session.requestHitTestSource({
+        space: viewerRefSpace,
       });
+      hitTestSourceRef.current = hitTestSource;
 
       session.addEventListener("end", () => {
         hitTestSourceRef.current = null;
@@ -83,6 +86,7 @@ const ARScene = ({ heldItem }) => {
     if (!frame || !hitTestSourceRef.current || !referenceSpace) return;
 
     const hits = frame.getHitTestResults(hitTestSourceRef.current);
+
     if (hits.length > 0) {
       const hit = hits[0];
       const pose = hit.getPose(referenceSpace);
@@ -91,10 +95,10 @@ const ARScene = ({ heldItem }) => {
           pose.transform.position.toArray()
         );
         setHitPosition(pos);
-        setDetectedPlane({ position: pos, size: 0.4 });
+        setDetectedPlane({ position: pos, size: 0.5 }); // Show stable plane
       }
     } else {
-      setDetectedPlane(null);
+      setDetectedPlane(null); // fallback to scanning indicator
     }
   });
 
@@ -125,7 +129,12 @@ const ARScene = ({ heldItem }) => {
 const ARCharacterScene = ({ heldItem }) => {
   return (
     <Canvas
-      style={{ width: "100vw", height: "100vh", background: "transparent" }}
+      style={{
+        width: "100vw",
+        height: "100vh",
+        background: "transparent",
+        pointerEvents: "none",
+      }}
       gl={{ alpha: true }}
       camera={{ near: 0.01, far: 20 }}
       onCreated={({ gl }) => {

@@ -18,26 +18,29 @@ const Item = ({ type, position }) => {
 };
 
 const PlaneOutline = ({ position, size, color }) => {
-  const geometry = new THREE.PlaneGeometry(size, size);
-  const material = new THREE.MeshBasicMaterial({
-    color,
-    side: THREE.DoubleSide,
-    wireframe: true,
-    transparent: true,
-    opacity: 0.7,
-  });
+  const geometryRef = useRef();
+
+  useEffect(() => {
+    if (geometryRef.current) {
+      geometryRef.current.computeBoundingBox();
+    }
+  }, []);
+
   return (
-    <mesh
-      geometry={geometry}
-      material={material}
-      position={position}
-      rotation-x={-Math.PI / 2}
-    />
+    <mesh position={position} rotation={[-Math.PI / 2, 0, 0]}>
+      <planeGeometry ref={geometryRef} args={[size, size]} />
+      <meshBasicMaterial
+        color={color}
+        wireframe={true}
+        transparent={true}
+        opacity={0.8}
+      />
+    </mesh>
   );
 };
 
 const ARScene = ({ heldItem }) => {
-  const { gl } = useThree();
+  const { gl, camera } = useThree();
   const [hitPosition, setHitPosition] = useState(null);
   const [detectedPlane, setDetectedPlane] = useState(null);
   const hitTestSourceRef = useRef();
@@ -46,7 +49,7 @@ const ARScene = ({ heldItem }) => {
   useEffect(() => {
     const startAR = async () => {
       if (!navigator.xr) {
-        alert("WebXR not supported");
+        alert("WebXR not supported on this browser");
         return;
       }
 
@@ -60,14 +63,15 @@ const ARScene = ({ heldItem }) => {
         requiredFeatures: ["hit-test", "local-floor"],
       });
 
-      gl.xr.setReferenceSpaceType("local");
+      gl.xr.enabled = true;
+      gl.xr.setReferenceSpaceType("local-floor");
       gl.xr.setSession(session);
 
-      const viewerRefSpace = await session.requestReferenceSpace("viewer");
-      refSpace.current = viewerRefSpace;
+      const refSpaceVal = await session.requestReferenceSpace("viewer");
+      refSpace.current = refSpaceVal;
 
       const hitTestSource = await session.requestHitTestSource({
-        space: viewerRefSpace,
+        space: refSpaceVal,
       });
       hitTestSourceRef.current = hitTestSource;
 
@@ -86,7 +90,6 @@ const ARScene = ({ heldItem }) => {
     if (!frame || !hitTestSourceRef.current || !referenceSpace) return;
 
     const hits = frame.getHitTestResults(hitTestSourceRef.current);
-
     if (hits.length > 0) {
       const hit = hits[0];
       const pose = hit.getPose(referenceSpace);
@@ -95,25 +98,25 @@ const ARScene = ({ heldItem }) => {
           pose.transform.position.toArray()
         );
         setHitPosition(pos);
-        setDetectedPlane({ position: pos, size: 0.5 }); // Show stable plane
+        setDetectedPlane({ position: pos, size: 0.5 });
       }
     } else {
-      setDetectedPlane(null); // fallback to scanning indicator
+      setDetectedPlane(null);
     }
   });
 
   return (
     <>
+      {!detectedPlane && hitPosition && (
+        <PlaneOutline position={hitPosition} size={0.3} color="green" />
+      )}
+
       {detectedPlane && (
         <PlaneOutline
           position={detectedPlane.position}
           size={detectedPlane.size}
           color="blue"
         />
-      )}
-
-      {!detectedPlane && hitPosition && (
-        <PlaneOutline position={hitPosition} size={0.3} color="green" />
       )}
 
       {hitPosition && (
@@ -135,7 +138,7 @@ const ARCharacterScene = ({ heldItem }) => {
         background: "transparent",
         pointerEvents: "none",
       }}
-      gl={{ alpha: true }}
+      gl={{ alpha: true, preserveDrawingBuffer: true }}
       camera={{ near: 0.01, far: 20 }}
       onCreated={({ gl }) => {
         gl.xr.enabled = true;

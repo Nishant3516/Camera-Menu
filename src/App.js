@@ -1,9 +1,8 @@
 import React, { useState } from "react";
-import Menu from "./components/Menu";
-import ARCharacterScene from "./components/ARChanracterScene";
+import ARCharacterScene from "./ARCharacterScene";
+import Menu from "./Menu";
 
 function App() {
-  const [started, setStarted] = useState(false);
   const [item, setItem] = useState(null);
   const [arStarted, setArStarted] = useState(false);
 
@@ -31,6 +30,7 @@ function App() {
           Tap to Start AR
         </div>
       )}
+
       {arStarted && (
         <>
           <ARCharacterScene heldItem={item} />

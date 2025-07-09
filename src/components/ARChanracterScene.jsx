@@ -1,6 +1,6 @@
+// ARCharacterScene.js
 import React, { useEffect, useRef, useState, Suspense } from "react";
 import { Canvas, useFrame, useThree } from "@react-three/fiber";
-import { ARButton } from "three/examples/jsm/webxr/ARButton";
 import { useGLTF } from "@react-three/drei";
 import * as THREE from "three";
 
@@ -11,69 +11,61 @@ const Character = ({ position }) => {
   );
 };
 
+const Item = ({ type, position }) => {
+  const { scene } = useGLTF(`/assets/${type}.glb`);
+  return (
+    <primitive object={scene} position={position} scale={[0.3, 0.3, 0.3]} />
+  );
+};
+
 const ARScene = ({ heldItem }) => {
   const { gl, scene, camera } = useThree();
   const [hitPosition, setHitPosition] = useState(null);
-  const ref = useRef();
   const hitTestSourceRef = useRef();
+  const refSpace = useRef();
 
   useEffect(() => {
-    gl.xr.enabled = true;
+    const startARSession = async () => {
+      gl.xr.enabled = true;
 
-    gl.setAnimationLoop(() => {
-      gl.render(scene, camera);
-    });
+      const session = await navigator.xr.requestSession("immersive-ar", {
+        requiredFeatures: ["hit-test", "local-floor"],
+      });
 
-    // Add AR Button
-    const arButton = ARButton.createButton(gl, {
-      requiredFeatures: ["hit-test"],
-    });
-    document.body.appendChild(arButton);
+      gl.xr.setSession(session);
 
-    const onSessionStart = (session) => {
-      session.requestReferenceSpace("viewer").then((referenceSpace) => {
-        session
-          .requestHitTestSource({ space: referenceSpace })
-          .then((source) => {
-            hitTestSourceRef.current = source;
-          });
+      refSpace.current = await session.requestReferenceSpace("viewer");
+
+      hitTestSourceRef.current = await session.requestHitTestSource({
+        space: refSpace.current,
+      });
+
+      session.addEventListener("end", () => {
+        hitTestSourceRef.current = null;
       });
     };
 
-    gl.xr.addEventListener("sessionstart", () => {
-      const session = gl.xr.getSession();
-      if (session) {
-        onSessionStart(session);
-      }
-    });
+    if (navigator.xr) {
+      navigator.xr.isSessionSupported("immersive-ar").then((supported) => {
+        if (supported) startARSession();
+      });
+    }
+  }, [gl]);
 
-    return () => {
-      if (hitTestSourceRef.current) {
-        hitTestSourceRef.current.cancel();
-        hitTestSourceRef.current = null;
-      }
-
-      // Cleanup AR Button if needed
-      if (arButton && arButton.parentNode) {
-        arButton.parentNode.removeChild(arButton);
-      }
-    };
-  }, [gl, scene, camera]);
-
-  useFrame((state, delta) => {
+  useFrame((state) => {
     const xrFrame = state.gl.xr.getFrame();
     const referenceSpace = state.gl.xr.getReferenceSpace();
 
-    if (!xrFrame || !hitTestSourceRef.current) return;
+    if (!xrFrame || !hitTestSourceRef.current || !referenceSpace) return;
 
     const hitTestResults = xrFrame.getHitTestResults(hitTestSourceRef.current);
     if (hitTestResults.length > 0) {
       const hit = hitTestResults[0];
       const pose = hit.getPose(referenceSpace);
-
       const pos = new THREE.Vector3().fromArray(
         pose.transform.position.toArray()
       );
+
       setHitPosition(pos);
     }
   });
@@ -81,12 +73,10 @@ const ARScene = ({ heldItem }) => {
   return (
     <>
       {hitPosition && (
-        <group ref={ref}>
-          <Suspense fallback={null}>
-            <Character position={hitPosition} />
-            {/* You can place item based on heldItem here too */}
-          </Suspense>
-        </group>
+        <Suspense fallback={null}>
+          <Character position={hitPosition} />
+          {heldItem && <Item type={heldItem} position={hitPosition} />}
+        </Suspense>
       )}
     </>
   );
@@ -95,7 +85,7 @@ const ARScene = ({ heldItem }) => {
 const ARCharacterScene = ({ heldItem }) => {
   return (
     <Canvas
-      style={{ height: "100vh", width: "100vw" }}
+      style={{ width: "100vw", height: "100vh" }}
       camera={{ near: 0.01, far: 20 }}
       onCreated={({ gl }) => {
         gl.xr.enabled = true;

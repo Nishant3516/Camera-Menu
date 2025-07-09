@@ -1,4 +1,3 @@
-// ARCharacterScene.js
 import React, { useEffect, useRef, useState, Suspense } from "react";
 import { Canvas, useFrame, useThree } from "@react-three/fiber";
 import { useGLTF } from "@react-three/drei";
@@ -26,16 +25,25 @@ const ARScene = ({ heldItem }) => {
 
   useEffect(() => {
     const startARSession = async () => {
-      gl.xr.enabled = true;
+      if (!navigator.xr) {
+        alert("WebXR not supported");
+        return;
+      }
+
+      const supported = await navigator.xr.isSessionSupported("immersive-ar");
+      if (!supported) {
+        alert("AR not supported on this device");
+        return;
+      }
 
       const session = await navigator.xr.requestSession("immersive-ar", {
         requiredFeatures: ["hit-test", "local-floor"],
       });
 
+      gl.xr.setReferenceSpaceType("local");
       gl.xr.setSession(session);
 
       refSpace.current = await session.requestReferenceSpace("viewer");
-
       hitTestSourceRef.current = await session.requestHitTestSource({
         space: refSpace.current,
       });
@@ -45,11 +53,7 @@ const ARScene = ({ heldItem }) => {
       });
     };
 
-    if (navigator.xr) {
-      navigator.xr.isSessionSupported("immersive-ar").then((supported) => {
-        if (supported) startARSession();
-      });
-    }
+    startARSession();
   }, [gl]);
 
   useFrame((state) => {

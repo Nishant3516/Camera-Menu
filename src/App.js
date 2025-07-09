@@ -1,6 +1,6 @@
 import React, { useState } from "react";
-import ARCharacterScene from "./ARCharacterScene";
-import Menu from "./Menu";
+import ARCharacterScene from "./components/ARCharacterScene";
+import Menu from "./components/Menu";
 
 function App() {
   const [item, setItem] = useState(null);

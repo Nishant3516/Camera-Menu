@@ -1,37 +1,47 @@
-// App.jsx
-import React, { useEffect, useRef, useState } from "react";
-import "./styles.css";
-import Scene from "./components/Scene";
-import ItemSelector from "./components/ItemSelector";
+// App.js
+import React, { useState } from "react";
+import CameraFeed from "./components/CameraFeed";
+import CharacterScene from "./components/CharacterScene";
+import Menu from "./components/Menu";
 
-export default function App() {
-  const videoRef = useRef(null);
-  const [showMenu, setShowMenu] = useState(false);
-  const [selectedItem, setSelectedItem] = useState(null);
-
-  useEffect(() => {
-    navigator.mediaDevices.getUserMedia({ video: true }).then((stream) => {
-      if (videoRef.current) videoRef.current.srcObject = stream;
-    });
-  }, []);
-
-  const handleItemSelect = (item) => {
-    setSelectedItem(item);
-  };
+function App() {
+  const [started, setStarted] = useState(false);
+  const [item, setItem] = useState(null);
 
   return (
     <>
-      <video ref={videoRef} autoPlay muted playsInline id="video-feed" />
-      <div className="overlay">
-        {!showMenu && (
-          <button onClick={() => setShowMenu(true)} className="start-button">
-            Start
-          </button>
-        )}
-        {showMenu && <ItemSelector onSelect={handleItemSelect} />}
+      <CameraFeed />
+      <div
+        style={{
+          position: "absolute",
+          top: 0,
+          left: 0,
+          width: "100vw",
+          height: "100vh",
+        }}
+      >
+        <CharacterScene heldItem={item} />
       </div>
-
-      <Scene selectedItem={showMenu} />
+      {!started ? (
+        <button
+          style={{
+            position: "absolute",
+            bottom: "40px",
+            left: "50%",
+            transform: "translateX(-50%)",
+            padding: "16px 24px",
+            fontSize: "1.2rem",
+            zIndex: 10,
+          }}
+          onClick={() => setStarted(true)}
+        >
+          Start
+        </button>
+      ) : (
+        <Menu onSelect={setItem} />
+      )}
     </>
   );
 }
+
+export default App;

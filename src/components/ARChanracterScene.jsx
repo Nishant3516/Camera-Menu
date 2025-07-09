@@ -18,15 +18,15 @@ const Item = ({ type, position }) => {
 };
 
 const ARScene = ({ heldItem }) => {
-  const { gl, scene, camera } = useThree();
+  const { gl } = useThree();
   const [hitPosition, setHitPosition] = useState(null);
   const hitTestSourceRef = useRef();
   const refSpace = useRef();
 
   useEffect(() => {
-    const startARSession = async () => {
+    const startAR = async () => {
       if (!navigator.xr) {
-        alert("WebXR not supported");
+        alert("WebXR not supported on this browser");
         return;
       }
 
@@ -53,24 +53,25 @@ const ARScene = ({ heldItem }) => {
       });
     };
 
-    startARSession();
+    startAR();
   }, [gl]);
 
   useFrame((state) => {
-    const xrFrame = state.gl.xr.getFrame();
+    const frame = state.gl.xr.getFrame();
     const referenceSpace = state.gl.xr.getReferenceSpace();
 
-    if (!xrFrame || !hitTestSourceRef.current || !referenceSpace) return;
+    if (!frame || !hitTestSourceRef.current || !referenceSpace) return;
 
-    const hitTestResults = xrFrame.getHitTestResults(hitTestSourceRef.current);
-    if (hitTestResults.length > 0) {
-      const hit = hitTestResults[0];
+    const hits = frame.getHitTestResults(hitTestSourceRef.current);
+    if (hits.length > 0) {
+      const hit = hits[0];
       const pose = hit.getPose(referenceSpace);
-      const pos = new THREE.Vector3().fromArray(
-        pose.transform.position.toArray()
-      );
-
-      setHitPosition(pos);
+      if (pose) {
+        const pos = new THREE.Vector3().fromArray(
+          pose.transform.position.toArray()
+        );
+        setHitPosition(pos);
+      }
     }
   });
 
@@ -89,7 +90,8 @@ const ARScene = ({ heldItem }) => {
 const ARCharacterScene = ({ heldItem }) => {
   return (
     <Canvas
-      style={{ width: "100vw", height: "100vh" }}
+      style={{ width: "100vw", height: "100vh", background: "transparent" }}
+      gl={{ alpha: true }}
       camera={{ near: 0.01, far: 20 }}
       onCreated={({ gl }) => {
         gl.xr.enabled = true;
@@ -101,3 +103,9 @@ const ARCharacterScene = ({ heldItem }) => {
 };
 
 export default ARCharacterScene;
+
+// Note:
+// Place the following .glb files in public/assets:
+// - character.glb
+// - pizza.glb
+// - sushi.glb

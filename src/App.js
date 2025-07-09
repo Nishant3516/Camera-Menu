@@ -1,8 +1,6 @@
-// App.js
 import React, { useState } from "react";
-import CameraFeed from "./components/CameraFeed";
-import CharacterScene from "./components/CharacterScene";
 import Menu from "./components/Menu";
+import ARCharacterScene from "./components/ARChanracterScene";
 
 function App() {
   const [started, setStarted] = useState(false);
@@ -10,7 +8,7 @@ function App() {
 
   return (
     <>
-      <CameraFeed />
+      {/* <CameraFeed />
       <div
         style={{
           position: "absolute",
@@ -21,7 +19,8 @@ function App() {
         }}
       >
         <CharacterScene heldItem={item} />
-      </div>
+      </div> */}
+      <ARCharacterScene heldItem={item} />
       {!started ? (
         <button
           style={{

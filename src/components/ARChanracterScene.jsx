@@ -17,50 +17,60 @@ const Item = ({ type, position }) => {
   );
 };
 
+const PlaneOutline = ({ position, size, color }) => {
+  const geometry = new THREE.PlaneGeometry(size, size);
+  const material = new THREE.MeshBasicMaterial({
+    color,
+    side: THREE.DoubleSide,
+    wireframe: true,
+    transparent: true,
+    opacity: 0.7,
+  });
+  return (
+    <mesh
+      geometry={geometry}
+      material={material}
+      position={position}
+      rotation-x={-Math.PI / 2}
+    />
+  );
+};
+
 const ARScene = ({ heldItem }) => {
   const { gl } = useThree();
   const [hitPosition, setHitPosition] = useState(null);
+  const [detectedPlane, setDetectedPlane] = useState(null);
   const hitTestSourceRef = useRef();
   const refSpace = useRef();
 
   useEffect(() => {
     const startAR = async () => {
-      try {
-        if (!navigator.xr) {
-          alert("WebXR not supported in this browser");
-          return;
-        }
-
-        const supported = await navigator.xr.isSessionSupported("immersive-ar");
-        console.log("immersive-ar supported?", supported);
-
-        if (!supported) {
-          alert("AR not supported on this device");
-          return;
-        }
-
-        const session = await navigator.xr.requestSession("immersive-ar", {
-          requiredFeatures: ["hit-test", "local-floor"],
-        });
-
-        console.log("✅ AR session started");
-
-        gl.xr.setReferenceSpaceType("local");
-        gl.xr.setSession(session);
-
-        refSpace.current = await session.requestReferenceSpace("viewer");
-        hitTestSourceRef.current = await session.requestHitTestSource({
-          space: refSpace.current,
-        });
-
-        session.addEventListener("end", () => {
-          console.log("🔁 AR session ended");
-          hitTestSourceRef.current = null;
-        });
-      } catch (err) {
-        console.error("❌ Failed to start AR session:", err);
-        alert("Failed to start AR session: " + err.message);
+      if (!navigator.xr) {
+        alert("WebXR not supported on this browser");
+        return;
       }
+
+      const supported = await navigator.xr.isSessionSupported("immersive-ar");
+      if (!supported) {
+        alert("AR not supported on this device");
+        return;
+      }
+
+      const session = await navigator.xr.requestSession("immersive-ar", {
+        requiredFeatures: ["hit-test", "local-floor"],
+      });
+
+      gl.xr.setReferenceSpaceType("local");
+      gl.xr.setSession(session);
+
+      refSpace.current = await session.requestReferenceSpace("viewer");
+      hitTestSourceRef.current = await session.requestHitTestSource({
+        space: refSpace.current,
+      });
+
+      session.addEventListener("end", () => {
+        hitTestSourceRef.current = null;
+      });
     };
 
     startAR();
@@ -81,12 +91,27 @@ const ARScene = ({ heldItem }) => {
           pose.transform.position.toArray()
         );
         setHitPosition(pos);
+        setDetectedPlane({ position: pos, size: 0.4 });
       }
+    } else {
+      setDetectedPlane(null);
     }
   });
 
   return (
     <>
+      {detectedPlane && (
+        <PlaneOutline
+          position={detectedPlane.position}
+          size={detectedPlane.size}
+          color="blue"
+        />
+      )}
+
+      {!detectedPlane && hitPosition && (
+        <PlaneOutline position={hitPosition} size={0.3} color="green" />
+      )}
+
       {hitPosition && (
         <Suspense fallback={null}>
           <Character position={hitPosition} />
@@ -113,9 +138,3 @@ const ARCharacterScene = ({ heldItem }) => {
 };
 
 export default ARCharacterScene;
-
-// Note:
-// Place the following .glb files in public/assets:
-// - character.glb
-// - pizza.glb
-// - sushi.glb

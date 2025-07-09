@@ -25,32 +25,42 @@ const ARScene = ({ heldItem }) => {
 
   useEffect(() => {
     const startAR = async () => {
-      if (!navigator.xr) {
-        alert("WebXR not supported on this browser");
-        return;
+      try {
+        if (!navigator.xr) {
+          alert("WebXR not supported in this browser");
+          return;
+        }
+
+        const supported = await navigator.xr.isSessionSupported("immersive-ar");
+        console.log("immersive-ar supported?", supported);
+
+        if (!supported) {
+          alert("AR not supported on this device");
+          return;
+        }
+
+        const session = await navigator.xr.requestSession("immersive-ar", {
+          requiredFeatures: ["hit-test", "local-floor"],
+        });
+
+        console.log("✅ AR session started");
+
+        gl.xr.setReferenceSpaceType("local");
+        gl.xr.setSession(session);
+
+        refSpace.current = await session.requestReferenceSpace("viewer");
+        hitTestSourceRef.current = await session.requestHitTestSource({
+          space: refSpace.current,
+        });
+
+        session.addEventListener("end", () => {
+          console.log("🔁 AR session ended");
+          hitTestSourceRef.current = null;
+        });
+      } catch (err) {
+        console.error("❌ Failed to start AR session:", err);
+        alert("Failed to start AR session: " + err.message);
       }
-
-      const supported = await navigator.xr.isSessionSupported("immersive-ar");
-      if (!supported) {
-        alert("AR not supported on this device");
-        return;
-      }
-
-      const session = await navigator.xr.requestSession("immersive-ar", {
-        requiredFeatures: ["hit-test", "local-floor"],
-      });
-
-      gl.xr.setReferenceSpaceType("local");
-      gl.xr.setSession(session);
-
-      refSpace.current = await session.requestReferenceSpace("viewer");
-      hitTestSourceRef.current = await session.requestHitTestSource({
-        space: refSpace.current,
-      });
-
-      session.addEventListener("end", () => {
-        hitTestSourceRef.current = null;
-      });
     };
 
     startAR();
